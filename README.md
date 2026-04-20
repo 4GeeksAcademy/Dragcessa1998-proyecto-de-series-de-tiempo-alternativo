@@ -1,110 +1,219 @@
-# Data Science Project Boilerplate
 
-This boilerplate is designed to kickstart data science projects by providing a basic setup for database connections, data processing, and machine learning model development. It includes a structured folder organization for your datasets and a set of pre-defined Python packages necessary for most data science tasks.
+# Sistema de Predicción de Ventas con ARIMA
 
-## Structure
+Este proyecto desarrolla un sistema de predicción de ventas utilizando técnicas de análisis de series temporales. El objetivo es estimar el ritmo futuro de ventas de una empresa para apoyar la toma de decisiones logísticas, especialmente la planificación del espacio necesario en un nuevo almacén.
 
-The project is organized as follows:
+La serie histórica muestra un crecimiento sostenido desde la creación de la empresa, por lo que se analiza su comportamiento temporal y se entrena un modelo ARIMA para realizar predicciones sobre ventas futuras.
 
-- **`src/app.py`** → Main Python script where your project will run.
-- **`src/explore.ipynb`** → Notebook for exploration and testing. Once exploration is complete, migrate the clean code to `app.py`.
-- **`src/utils.py`** → Auxiliary functions, such as database connection.
-- **`requirements.txt`** → List of required Python packages.
-- **`models/`** → Will contain your SQLAlchemy model classes.
-- **`data/`** → Stores datasets at different stages:
-  - **`data/raw/`** → Raw data.
-  - **`data/interim/`** → Temporarily transformed data.
-  - **`data/processed/`** → Data ready for analysis.
+## Objetivo del Proyecto
 
+El objetivo principal es construir un modelo capaz de predecir ventas futuras a partir del comportamiento histórico de la serie.
 
-## ⚡ Initial Setup in Codespaces (Recommended)
+Para ello se desarrolla el siguiente flujo:
 
-No manual setup is required, as **Codespaces is automatically configured** with the predefined files created by the academy for you. Just follow these steps:
+1. Cargar el conjunto de datos.
+2. Construir una estructura válida de serie temporal.
+3. Analizar el comportamiento de la serie.
+4. Responder preguntas clave:
+   - ¿Cuál es el tensor de la serie temporal?
+   - ¿Cuál es la tendencia?
+   - ¿Es estacionaria?
+   - ¿Existe variabilidad o presencia de ruido?
+5. Entrenar un modelo ARIMA.
+6. Predecir sobre el conjunto de test.
+7. Medir el rendimiento del modelo.
+8. Guardar el modelo entrenado.
 
-1. **Wait for the environment to configure automatically**.
-   - All necessary packages and the database will install themselves.
-   - The automatically created `username` and `db_name` are in the **`.env`** file at the root of the project.
-2. **Once Codespaces is ready, you can start working immediately**.
+## Dataset
 
+El conjunto de datos utilizado es `sales.csv`.
 
-## 💻 Local Setup (Only if you can't use Codespaces)
+Contiene dos columnas:
 
-**Prerequisites**
+| Variable | Descripción |
+| --- | --- |
+| `date` | Fecha de la observación |
+| `sales` | Ventas registradas |
 
-Make sure you have Python 3.11+ installed on your machine. You will also need pip to install the Python packages.
+La columna `date` se transforma a formato datetime y se utiliza como índice temporal. La columna `sales` representa la variable que se desea predecir.
 
-**Installation**
+## Construcción de la Serie Temporal
 
-Clone the project repository to your local machine.
+Después de cargar el dataset, se ordenan las fechas y se construye una serie temporal diaria.
 
-Navigate to the project directory and install the required Python packages:
+La serie contiene 366 registros, desde septiembre de 2022 hasta septiembre de 2023.
+
+| Característica | Resultado |
+| --- | --- |
+| Fecha inicial | 2022-09-03 |
+| Fecha final | 2023-09-03 |
+| Número de registros | 366 |
+| Tensor temporal | Diario |
+| Valores faltantes | 0 |
+
+## Análisis de la Serie
+
+### Tensor de la serie temporal
+
+El tensor de la serie temporal es diario. Esto significa que la unidad mínima de tiempo para la cual se tienen datos es un día.
+
+### Tendencia
+
+La serie presenta una tendencia claramente creciente. Las ventas comienzan cerca de valores alrededor de 55 y alcanzan valores cercanos a 1000 al final del periodo analizado.
+
+Esto indica que la empresa ha experimentado un crecimiento sostenido en sus ventas.
+
+### Estacionariedad
+
+La serie original no es estacionaria. Para comprobarlo se utilizó la prueba Augmented Dickey-Fuller.
+
+Resultado sobre la serie original:
+
+```text
+ADF p-value: 0.9862
+```
+
+Como el p-value es mayor que 0.05, no se rechaza la hipótesis nula de no estacionariedad.
+
+Después de aplicar una primera diferenciación, el resultado fue:
+
+```text
+ADF p-value primera diferencia: 0.0000
+```
+
+Esto indica que la serie diferenciada sí puede considerarse estacionaria.
+
+### Variabilidad y ruido
+
+La serie presenta variabilidad alrededor de la tendencia principal. Sin embargo, el patrón de crecimiento es claro y estable, por lo que el ruido no impide construir un modelo predictivo útil.
+
+## Modelo ARIMA
+
+Se entrenó un modelo ARIMA utilizando el conjunto de entrenamiento. Para encontrar la mejor parametrización, se probaron distintas combinaciones de los parámetros `p`, `d` y `q`, seleccionando el modelo con mejor AIC.
+
+El mejor modelo encontrado fue:
+
+```text
+ARIMA(0, 2, 5)
+```
+
+Interpretación de los parámetros:
+
+| Parámetro | Valor | Interpretación |
+| --- | ---: | --- |
+| `p` | 0 | No utiliza términos autorregresivos |
+| `d` | 2 | Aplica dos diferenciaciones |
+| `q` | 5 | Utiliza cinco términos de media móvil |
+
+## Evaluación del Modelo
+
+El conjunto de datos se dividió en entrenamiento y prueba. El modelo fue entrenado con el 80% inicial de la serie y evaluado sobre el 20% final.
+
+Métricas obtenidas en el conjunto de test:
+
+| Métrica | Valor |
+| --- | ---: |
+| MAE | 2.3390 |
+| RMSE | 2.8889 |
+| MAPE | 0.0026 |
+
+El MAPE equivale aproximadamente a un error porcentual medio de 0.26%, lo que indica que el modelo sigue muy de cerca la evolución real de las ventas.
+
+## Predicción Futura
+
+Además de comparar las predicciones con el conjunto de test, se generó un pronóstico futuro de 60 días utilizando el modelo entrenado sobre toda la serie.
+
+Ejemplo de los primeros valores pronosticados:
+
+| Fecha | Predicción de ventas |
+| --- | ---: |
+| 2023-09-04 | 1002.21 |
+| 2023-09-05 | 1004.83 |
+| 2023-09-06 | 1007.43 |
+
+Este pronóstico permite estimar la evolución esperada de las ventas y apoyar la planificación del nuevo almacén.
+
+## Estructura del Proyecto
+
+```text
+Dragcessa1998-proyecto-de-series-de-tiempo-alternativo-main/
+│
+├── data/
+│   ├── raw/
+│   │   └── sales.csv
+│   ├── processed/
+│   │   ├── sales_time_series.csv
+│   │   ├── arima_grid_results.csv
+│   │   ├── arima_test_forecast.csv
+│   │   ├── arima_future_forecast_60_days.csv
+│   │   └── arima_metrics.csv
+│   └── interim/
+│
+├── models/
+│   └── sales_arima_model.pkl
+│
+├── src/
+│   ├── app.py
+│   ├── explore.ipynb
+│   └── utils.py
+│
+├── requirements.txt
+├── README.md
+└── README.es.md
+```
+
+## Archivos Principales
+
+| Archivo | Descripción |
+| --- | --- |
+| `src/explore.ipynb` | Notebook con el análisis completo de la serie temporal |
+| `src/app.py` | Script reproducible para entrenar el modelo y guardar resultados |
+| `data/raw/sales.csv` | Dataset original |
+| `data/processed/sales_time_series.csv` | Serie temporal procesada |
+| `data/processed/arima_grid_results.csv` | Resultados de búsqueda de parámetros ARIMA |
+| `data/processed/arima_test_forecast.csv` | Comparación entre ventas reales y ventas predichas |
+| `data/processed/arima_future_forecast_60_days.csv` | Pronóstico futuro de 60 días |
+| `data/processed/arima_metrics.csv` | Métricas finales del modelo |
+| `models/sales_arima_model.pkl` | Modelo ARIMA entrenado |
+
+## Cómo Ejecutar el Proyecto
+
+Instalar las dependencias:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Create a database (if necessary)**
-
-Create a new database within the Postgres engine by customizing and executing the following command:
-
-```bash
-$ psql -U postgres -c "DO \$\$ BEGIN 
-    CREATE USER my_user WITH PASSWORD 'my_password'; 
-    CREATE DATABASE my_database OWNER my_user; 
-END \$\$;"
-```
-Connect to the Postgres engine to use your database, manipulate tables, and data:
-
-```bash
-$ psql -U my_user -d my_database
-```
-
-Once inside PSQL, you can create tables, run queries, insert, update, or delete data, and much more!
-
-**Environment Variables**
-
-Create a .env file in the root directory of the project to store your environment variables, such as your database connection string:
-
-```makefile
-DATABASE_URL="postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DB_NAME>"
-
-#example
-DATABASE_URL="postgresql://my_user:my_password@localhost:5432/my_database"
-```
-
-## Running the Application
-
-To run the application, execute the app.py script from the root directory of the project:
+Ejecutar el script principal:
 
 ```bash
 python src/app.py
 ```
 
-## Adding Models
+También se puede abrir y ejecutar el notebook:
 
-To add SQLAlchemy model classes, create new Python script files within the models/ directory. These classes should be defined according to your database schema.
-
-Example model definition (`models/example_model.py`):
-
-```py
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
-Base = declarative_base()
-
-class ExampleModel(Base):
-    __tablename__ = 'example_table'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(unique=True)
+```text
+src/explore.ipynb
 ```
 
-## Working with Data
+El notebook contiene el desarrollo completo: carga de datos, construcción de la serie temporal, análisis visual, prueba de estacionariedad, búsqueda de parámetros ARIMA, predicción, evaluación y guardado del modelo.
 
-You can place your raw datasets in the data/raw directory, intermediate datasets in data/interim, and processed datasets ready for analysis in data/processed.
+## Tecnologías Utilizadas
 
-To process data, you can modify the app.py script to include your data processing steps, using pandas for data manipulation and analysis.
+- Python
+- Pandas
+- Matplotlib
+- Seaborn
+- Scikit-learn
+- Statsmodels
+- Jupyter Notebook
+- Pickle
 
+## Conclusión
+
+La serie de ventas presenta una tendencia creciente clara y no es estacionaria en su forma original. Después de aplicar diferenciación, se logra una estructura adecuada para entrenar un modelo ARIMA.
+
+El modelo ARIMA(0, 2, 5) obtuvo un rendimiento sólido sobre el conjunto de test, con un MAPE aproximado de 0.26%. Esto lo convierte en una herramienta útil para estimar ventas futuras y apoyar decisiones de planificación logística, como dimensionar el espacio necesario para un nuevo almacén.
 ## Contributors
 
 This template was built as part of the [Data Science and Machine Learning Bootcamp](https://4geeksacademy.com/us/coding-bootcamps/datascience-machine-learning) by 4Geeks Academy by [Alejandro Sanchez](https://twitter.com/alesanchezr) and many other contributors. Learn more about [4Geeks Academy BootCamp programs](https://4geeksacademy.com/us/programs) here.
